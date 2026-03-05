@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Escrow Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #131314;
+    --surface: #1E1F20;
+    --surface-hover: #333537;
+    --primary: #A8C7FA;
+    --on-primary: #062E6F;
+    --danger: #F2B8B5;
+    --on-danger: #601410;
+    --text-primary: #E3E3E3;
+    --text-secondary: #C4C7C5;
+    --outline: #444746;
+    --outline-variant: #44474680;
+    --success: #C4EED0;
+    --on-success: #072711;
+    
+    --font-family: 'Google Sans', system-ui, -apple-system, sans-serif;
+    --radius-sm: 8px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --radius-pill: 100px;
+    --transition: 0.2s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    min-height: 100vh;
+    font-family: var(--font-family);
+    background-color: var(--bg);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 24px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--outline-variant);
+  }
+
+  .title-group h1 {
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .title-group p {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--surface);
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--outline-variant);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #E2726E; 
+  }
+
+  .status-dot.connected {
+    background: #81C995; 
+  }
+
+  .section {
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    border: 1px solid var(--outline-variant);
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 500px) {
+    .grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .data-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .data-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .data-value {
+    font-size: 15px;
+    color: var(--text-primary);
+    word-break: break-all;
+  }
+
+  .mono {
+    font-family: 'Roboto Mono', ui-monospace, monospace;
+    font-size: 14px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: var(--font-family);
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 10px 24px;
+    border-radius: var(--radius-pill);
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .btn-primary {
+    background-color: var(--primary);
+    color: var(--on-primary);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: #BBD6FB;
+  }
+
+  .btn-secondary {
+    background-color: var(--outline);
+    color: var(--text-primary);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: #535756;
+  }
+
+  .btn-danger {
+    background-color: var(--danger);
+    color: var(--on-danger);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background-color: #F6C8C6;
+  }
+
+  .btn-success {
+    background-color: var(--success);
+    color: var(--on-success);
+  }
+
+  .btn-success:hover:not(:disabled) {
+    background-color: #9CE3B0;
+  }
+
+  .btn-text {
+    background: transparent;
+    color: var(--primary);
+    padding: 8px 16px;
+  }
+
+  .btn-text:hover:not(:disabled) {
+    background: rgba(168, 199, 250, 0.08);
+  }
+
+  .actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--outline-variant);
+  }
+
+  /* Added input styles to match the theme */
+  input {
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--outline);
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    font-size: 14px;
+    transition: var(--transition);
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+
+  input::placeholder {
+    color: var(--text-secondary);
+  }
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+  <header class="header">
+    <div class="title-group">
+      <h1>Escrow Elite Dashboard</h1>
+      <p>Secure on-chain transactions</p>
+    </div>
+    <div class="status-badge">
+      <div id="status-indicator" class="status-dot"></div>
+      <span id="status">Idle</span>
+    </div>
+  </header>
+
+  <!-- WALLET -->
+  <div class="section">
+    <div class="section-title">Wallet Details</div>
+    <div class="data-item">
+      <span class="data-label">Address</span>
+      <span id="walletText" class="data-value mono" style="color: var(--text-secondary);">Not connected</span>
+    </div>
+    <div class="actions-row">
+      <button id="connectBtn" class="btn btn-primary" onclick="connect()">Connect Wallet</button>
+      <button id="disconnectBtn" class="btn btn-secondary" onclick="disconnect()" style="display:none;">Disconnect</button>
+    </div>
+  </div>
+
+  <!-- CREATE DEAL -->
+  <div class="section">
+    <div class="section-title">Create Deal</div>
+    <input id="receiver" placeholder="Receiver address">
+    <input id="amount" placeholder="ETH amount">
+    <div class="actions-row" style="margin-top: 8px; padding-top: 0; border-top: none;">
+      <button class="btn btn-primary" onclick="createDeal()">Create Deal</button>
+    </div>
+  </div>
+
+  <!-- DEAL ACTIONS -->
+  <div class="section">
+    <div class="section-title">Deal Actions</div>
+    <input id="dealIdInput" placeholder="Deal ID">
+    <div class="actions-row" style="margin-top: 8px; padding-top: 0; border-top: none;">
+      <button class="btn btn-primary" onclick="approve()">Approve</button>
+      <button class="btn btn-success" onclick="complete()">Complete</button>
+      <button class="btn btn-danger" onclick="cancel()">Cancel</button>
+      <button class="btn btn-secondary" onclick="refund()">Refund (Owner)</button>
+    </div>
+  </div>
+
+  <!-- VIEW DEAL -->
+  <div class="section">
+    <div class="section-title">View Deal</div>
+    <input id="viewDealId" placeholder="Deal ID">
+    <div class="actions-row" style="margin-top: 8px; padding-top: 0; border-top: none;">
+      <button class="btn btn-secondary" onclick="loadDeal()">Load Deal</button>
+    </div>
+    <div class="data-item" style="margin-top: 16px;">
+      <span class="data-label">Deal Info</span>
+      <span id="dealInfo" class="data-value mono" style="white-space: pre-wrap;">No deal loaded</span>
+    </div>
+  </div>
+
+  <!-- MY DEALS -->
+  <div class="section">
+    <div class="section-title">My Deals</div>
+    <div class="data-item">
+      <span class="data-label">Deal IDs</span>
+      <span id="myDeals" class="data-value mono">None</span>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-secondary" onclick="loadMyDeals()">Refresh</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+/* CONFIG */
+
+const contractAddress =
+"0x99665ffa5b82e0ee927dd39205b73a597cbd0434";
+
+const abi = [
+
+"function createDeal(address receiver) payable",
+"function approveDeal(uint id)",
+"function completeDeal(uint id)",
+"function cancelDeal(uint id)",
+"function refundDeal(uint id)",
+
+"function getDeal(uint id) view returns(address,address,uint,uint,uint)",
+"function getMyDeals() view returns(uint[])"
+
+];
+
+
+/* GLOBAL */
+
+let provider;
+let signer;
+let contract;
+let account;
+
+
+/* STATUS */
+
+function setStatus(text){
+document.getElementById("status").innerText = text;
+}
+
+
+/* CONNECT */
+
+async function connect(){
+
+provider =
+new ethers.providers.Web3Provider(window.ethereum);
+
+await provider.send("eth_requestAccounts",[]);
+
+signer = provider.getSigner();
+
+account = await signer.getAddress();
+
+contract =
+new ethers.Contract(contractAddress,abi,signer);
+
+document.getElementById("walletText").innerText =
+account;
+
+document.getElementById("connectBtn").style.display="none";
+document.getElementById("disconnectBtn").style.display="inline-flex";
+document.getElementById("status-indicator").classList.add("connected");
+
+loadMyDeals();
+
+}
+
+
+/* DISCONNECT */
+
+function disconnect(){
+
+provider=null;
+signer=null;
+contract=null;
+
+document.getElementById("walletText").innerText="Not connected";
+
+document.getElementById("connectBtn").style.display="inline-flex";
+document.getElementById("disconnectBtn").style.display="none";
+document.getElementById("status-indicator").classList.remove("connected");
+
+}
+
+
+/* CREATE */
+
+async function createDeal(){
+
+const receiver =
+document.getElementById("receiver").value;
+
+const amount =
+document.getElementById("amount").value;
+
+setStatus("Sending transaction...");
+
+const tx =
+await contract.createDeal(
+receiver,
+{ value: ethers.utils.parseEther(amount) }
+);
+
+await tx.wait();
+
+setStatus("Deal created");
+
+loadMyDeals();
+
+}
+
+
+/* APPROVE */
+
+async function approve(){
+
+const id =
+document.getElementById("dealIdInput").value;
+
+setStatus("Approving...");
+
+const tx =
+await contract.approveDeal(id);
+
+await tx.wait();
+
+setStatus("Approved");
+
+}
+
+
+/* COMPLETE */
+
+async function complete(){
+
+const id =
+document.getElementById("dealIdInput").value;
+
+setStatus("Completing...");
+
+const tx =
+await contract.completeDeal(id);
+
+await tx.wait();
+
+setStatus("Completed");
+
+}
+
+
+/* CANCEL */
+
+async function cancel(){
+
+const id =
+document.getElementById("dealIdInput").value;
+
+setStatus("Canceling...");
+
+const tx =
+await contract.cancelDeal(id);
+
+await tx.wait();
+
+setStatus("Canceled");
+
+}
+
+
+/* REFUND */
+
+async function refund(){
+
+const id =
+document.getElementById("dealIdInput").value;
+
+setStatus("Refunding...");
+
+const tx =
+await contract.refundDeal(id);
+
+await tx.wait();
+
+setStatus("Refunded");
+
+}
+
+
+/* LOAD DEAL */
+
+async function loadDeal(){
+
+const id =
+document.getElementById("viewDealId").value;
+
+const deal =
+await contract.getDeal(id);
+
+document.getElementById("dealInfo").innerText =
+
+"Sender: "+deal[0]+
+"\nReceiver: "+deal[1]+
+"\nAmount: "+
+ethers.utils.formatEther(deal[2])+" ETH"+
+"\nStatus: "+deal[4];
+
+}
+
+
+/* LOAD MY DEALS */
+
+async function loadMyDeals(){
+
+const deals =
+await contract.getMyDeals();
+
+document.getElementById("myDeals").innerText =
+deals.join(", ");
+
+}
+
+
+/* AUTO CONNECT */
+
+window.onload = async ()=>{
+
+if(window.ethereum){
+
+const accounts =
+await window.ethereum.request({
+method:"eth_accounts"
+});
+
+if(accounts.length>0){
+
+connect();
+
+}
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
